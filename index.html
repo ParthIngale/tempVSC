@@ -4,128 +4,6 @@
   <title>Greenhouse Live Monitor</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f0f4f8;
-      text-align: center;
-      padding-top: 50px;
-    }
-    .card {
-      display: inline-block;
-      background: white;
-      padding: 20px 30px;
-      margin: 10px;
-      border-radius: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
-    h1 {
-      color: #2d3e50;
-      margin-bottom: 20px;
-    }
-    h2 { margin-bottom: 10px; color: #333; }
-    .value {
-      font-size: 26px;
-      color: #007BFF;
-      font-weight: bold;
-    }
-
-    /* Toast Notification */
-    #toast {
-      visibility: hidden;
-      min-width: 250px;
-      background-color: #323232;
-      color: #fff;
-      text-align: center;
-      border-radius: 8px;
-      padding: 16px;
-      position: fixed;
-      z-index: 1;
-      left: 50%;
-      bottom: 30px;
-      transform: translateX(-50%);
-      font-size: 18px;
-      opacity: 0;
-      transition: visibility 0s, opacity 0.5s ease-in-out;
-    }
-
-    #toast.show {
-      visibility: visible;
-      opacity: 1;
-    }
-  </style>
-</head>
-<body>
-
-  <h1>🌿 Greenhouse Live Monitor</h1>
-
-  <div class="card">
-    <h2>🌡️ Temperature</h2>
-    <div id="temperature" class="value">--</div>
-  </div>
-
-  <div class="card">
-    <h2>💧 Humidity</h2>
-    <div id="humidity" class="value">--</div>
-  </div>
-
-  <div class="card">
-    <h2>🌀 Fan Status</h2>
-    <div id="fanStatus" class="value">--</div>
-  </div>
-
-  <div id="toast"></div>
-
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyA2pTcFwoFc0VXsBGuX4-SjTRBykTLeE4g",
-      databaseURL: "https://tempvsc-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    let lastFanState = null;
-
-    function showPopup(message) {
-      const toast = document.getElementById("toast");
-      toast.textContent = message;
-      toast.className = "show";
-
-      setTimeout(() => {
-        toast.className = toast.className.replace("show", "");
-      }, 3000); // Hide after 3 seconds
-    }
-
-    db.ref("/Greenhouse/Temperature").on("value", snapshot => {
-      document.getElementById("temperature").textContent = snapshot.val() + " °C";
-    });
-
-    db.ref("/Greenhouse/Humidity").on("value", snapshot => {
-      document.getElementById("humidity").textContent = snapshot.val() + " %";
-    });
-
-    db.ref("/Greenhouse/FanState").on("value", snapshot => {
-      const newState = snapshot.val();
-      document.getElementById("fanStatus").textContent = newState;
-
-      if (lastFanState !== null && lastFanState !== newState) {
-        showPopup(`🛎️ Fan turned ${newState}`);
-      }
-      lastFanState = newState;
-    });
-  </script>
-
-</body>
-</html> -->
-
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Greenhouse Live Monitor</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -211,7 +89,7 @@
   <div id="toast"></div>
 
   <!-- Chart Section -->
-  <div id="chartContainer">
+<!--   <div id="chartContainer">
     <h2>📈 Temperature & Humidity Trends</h2>
     <canvas id="dataChart" width="100%" height="60"></canvas>
   </div>
@@ -235,6 +113,211 @@
         toast.className = toast.className.replace("show", "");
       }, 3000);
     }
+
+    db.ref("/Greenhouse/Temperature").on("value", snapshot => {
+      document.getElementById("temperature").textContent = snapshot.val() + " °C";
+    });
+
+    db.ref("/Greenhouse/Humidity").on("value", snapshot => {
+      document.getElementById("humidity").textContent = snapshot.val() + " %";
+    });
+
+    db.ref("/Greenhouse/FanState").on("value", snapshot => {
+      const newState = snapshot.val();
+      document.getElementById("fanStatus").textContent = newState;
+      if (lastFanState !== null && lastFanState !== newState) {
+        showPopup(`🛎️ Fan turned ${newState}`);
+      }
+      lastFanState = newState;
+    });
+
+    // Chart setup
+    const ctx = document.getElementById('dataChart').getContext('2d');
+    const dataChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [], // timestamps
+        datasets: [
+          {
+            label: 'Temperature (°C)',
+            data: [],
+            borderColor: '#ff5722',
+            backgroundColor: 'rgba(255, 87, 34, 0.1)',
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: 'Humidity (%)',
+            data: [],
+            borderColor: '#2196f3',
+            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+            fill: true,
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { display: true, title: { display: true, text: 'Time' } },
+          y: { display: true, title: { display: true, text: 'Value' }, beginAtZero: true }
+        }
+      }
+    });
+
+    // Fetch and plot data from GreenhouseLogs
+    db.ref("/GreenhouseLogs").limitToLast(10).on("value", snapshot => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      const timestamps = [];
+      const tempData = [];
+      const humData = [];
+
+      Object.values(data).forEach(entry => {
+        timestamps.push(entry.timestamp || "--");
+        tempData.push(entry.temperature);
+        humData.push(entry.humidity);
+      });
+
+      dataChart.data.labels = timestamps;
+      dataChart.data.datasets[0].data = tempData;
+      dataChart.data.datasets[1].data = humData;
+      dataChart.update();
+    });
+  </script>
+
+</body>
+</html> -->
+
+
+<!-- New Changes  -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Greenhouse Live Monitor</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f4f8;
+      text-align: center;
+      padding-top: 50px;
+    }
+    .card {
+      display: inline-block;
+      background: white;
+      padding: 20px 30px;
+      margin: 10px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+    h1 {
+      color: #2d3e50;
+      margin-bottom: 20px;
+    }
+    h2 { margin-bottom: 10px; color: #333; }
+    .value {
+      font-size: 26px;
+      color: #007BFF;
+      font-weight: bold;
+    }
+
+    /* Toast Notification */
+    #toast {
+  visibility: hidden;
+  position: fixed;
+  top: 30px;
+  left: 30px;
+  background-color: #ffe4c4;
+  color: #222;
+  padding: 20px 30px;
+  font-size: 22px;
+  font-weight: bold;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  opacity: 0;
+  transition: visibility 0s, opacity 0.5s ease-in-out;
+}
+
+#toast.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+.toast-icon {
+  font-size: 34px;
+}
+
+    #chartContainer {
+      width: 90%;
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌿 Greenhouse Live Monitor</h1>
+
+  <div class="card">
+    <h2>🌡️ Temperature</h2>
+    <div id="temperature" class="value">--</div>
+  </div>
+
+  <div class="card">
+    <h2>💧 Humidity</h2>
+    <div id="humidity" class="value">--</div>
+  </div>
+
+  <div class="card">
+    <h2>🌀 Fan Status</h2>
+    <div id="fanStatus" class="value">--</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Chart Section -->
+  <div id="chartContainer">
+    <h2>📈 Temperature & Humidity Trends</h2>
+    <canvas id="dataChart" width="100%" height="60"></canvas>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyA2pTcFwoFc0VXsBGuX4-SjTRBykTLeE4g",
+      databaseURL: "https://tempvsc-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let lastFanState = null;
+
+function showPopup(message) {
+  const toast = document.getElementById("toast");
+
+  // Split icon and message
+  const icon = message.includes("ON") ? "🟢" : "🔴";
+
+  toast.innerHTML = `<span class="toast-icon">${icon}</span> ${message}`;
+  toast.className = "show";
+
+  setTimeout(() => {
+    toast.className = toast.className.replace("show", "");
+  }, 4000); // Show for 4 seconds
+}
 
     db.ref("/Greenhouse/Temperature").on("value", snapshot => {
       document.getElementById("temperature").textContent = snapshot.val() + " °C";
